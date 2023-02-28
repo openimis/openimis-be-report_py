@@ -36,11 +36,11 @@ class Query(graphene.ObjectType):
         name=graphene.String(required=True),
     )
 
-    def resolve_reports(self, info, permissions=None, **kwargs):
+    def resolve_reports(self, info, **kwargs):
         return [
             report
             for report in ReportConfig.reports
-            if len(set(report["permission"]).intersection(set(permissions)))
+            if info.context.user.has_perms(report["permission"])
         ]
 
     def resolve_report(self, info, name, **kwargs):
