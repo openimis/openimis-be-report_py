@@ -29,7 +29,6 @@ class Query(graphene.ObjectType):
     reports = graphene.List(
         ReportGQLType,
         description="This lists all the available reports on the system, exposed by each module",
-        permissions=graphene.List(graphene.String),
     )
     report = graphene.Field(
         ReportGQLType,
