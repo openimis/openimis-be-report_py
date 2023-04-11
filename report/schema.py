@@ -62,7 +62,7 @@ def update_or_create_report_definition(data, user):
         name=name, validity_to__isnull=True
     ).first()
     if report_definition:
-        report_definition.validity_to = TimeUtils.now()
+        report_definition.save_history()
     else:
         template = ReportConfig.get_report(name)
         report_definition = ReportDefinition.objects.create(
