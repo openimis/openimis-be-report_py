@@ -2,6 +2,7 @@ import io
 import json
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.staticfiles import finders
 from django.db import connection
 from django.db.models import Q
 from django.http import FileResponse
@@ -68,42 +69,92 @@ def _dictfetchall(cursor):
     ]
 
 
-def generate_report(report_name, definition, data, report_format="pdf", filename=None):
-    # Note on non-latin character sets
-    # ReportBro by default only provides latin character set variations. It is possible to add specific fonts
-    # that can then be used in the template.
-    # encode_error_handling can be strict, ignore or replace (with U+FFFD, the question mark in a diamond)
+def generate_report(report_name, definition, data, report_format="pdf", local_file='', is_test_data=None):
+    """
+    Generate a PDF/XLSX report.
+    :param report_name: Name of the report, only used for error reporting
+    :param definition: Report definition, either a dict or a JSON string
+    :param data: Data to pass to the report
+    :param report_format: pdf or xlsx
+    :param local_file: Leave out to get a response that will be included into a HTTP response, otherwise a local file where the report will be saved (for preview)
+    :param is_test_data: If True, the report will be generated with test data
+    :return: A FileResponse or None if local_file is set
+    """
     try:
-        r = Report(json.loads(definition), data,
-                   # TODO Additional fonts should be configurable in DB or settings.py
-                   #additional_fonts=[dict(value='kantipur', filename=os.path.join(os.path.dirname(__file__), "fonts", "kantipur.ttf"))],
-                   encode_error_handling="replace",
+        r = Report(definition if isinstance(definition, dict) else json.loads(definition), data,
+                   additional_fonts=[
+                       dict(
+                           value='firefly', filename=finders.find("report/reportbro/fonts/fireflysung.ttf")
+                       ),
+                       dict(
+                           value='dejavusans',
+                           filename=finders.find('report/reportbro/fonts/DejaVuSans.ttf'),
+                           bold_filename=finders.find('report/reportbro/fonts/DejaVuSans-Bold.ttf'),
+                           italic_filename=finders.find('report/reportbro/fonts/DejaVuSans-Oblique.ttf'),
+                           bold_italic_filename=finders.find('report/reportbro/fonts/DejaVuSans-BoldOblique.ttf'),
+                       ),
+                       dict(
+                           value='notosans',
+                           filename=finders.find('report/reportbro/fonts/NotoSans-Regular.ttf'),
+                           bold_filename=finders.find('report/reportbro/fonts/NotoSans-Bold.ttf'),
+                           italic_filename=finders.find('report/reportbro/fonts/NotoSans-Italic.ttf'),
+                           bold_italic_filename=finders.find('report/reportbro/fonts/NotoSans-BoldItalique.ttf'),
+                       ),
+                       dict(
+                           value='notosans-myanmar',
+                           filename=finders.find('report/reportbro/fonts/NotoSansMyanmar-Regular.ttf'),
+                           bold_filename=finders.find('report/reportbro/fonts/NotoSansMyanmar-Bold.ttf'),
+                       ),
+                       dict(
+                           value='notosans-arabic',
+                           filename=finders.find('report/reportbro/fonts/NotoSansArabic.ttf'),
+                       ),
+                       dict(
+                           value='notosans-naskh-arabic',
+                           filename=finders.find('report/reportbro/fonts/NotoNaskhArabic.ttf'),
+                       ),
+                       dict(
+                           value='notosans-ethiopic',
+                           filename=finders.find('report/reportbro/fonts/NotoSansEthiopic.ttf'),
+                       ),
+                       dict(
+                           value='freesans',
+                           filename=finders.find('report/reportbro/fonts/FreeSans.ttf'),
+                           bold_filename=finders.find('report/reportbro/fonts/FreeSansBold.ttf'),
+                           italic_filename=finders.find('report/reportbro/fonts/FreeSansOblique.ttf'),
+                           bold_italic_filename=finders.find('report/reportbro/fonts/FreeSansBoldOblique.ttf'),
+                       ),
+                       dict(
+                           value="unifont",
+                           filename=finders.find("report/reportbro/fonts/unifont.ttf"),
+                       ),
+                   ],
+                   encode_error_handling="strict",
+                   is_test_data=is_test_data,
+                   core_fonts_encoding="utf-8",
                    )
     except Exception as e:
         logger.exception(f"Error loading report definition {report_name}")
         raise ReportBroError(str(e))
-    fname = filename if filename else f"{report_name}.{report_format}"
     if r.errors:
         logger.error(f"Error generating report {report_name}: {r.errors[0]}")
         raise ReportBroError(r.errors[0])
 
     if report_format == "pdf":
         try:
-            generated_report = r.generate_pdf()
+            generated_report = r.generate_pdf(filename=local_file)
         except Exception as e:
             logger.exception(f"Error generating PDF report {report_name}")
             raise ReportBroError(str(e))
     elif report_format == "xlsx":
         try:
-            generated_report = r.generate_xlsx()
+            generated_report = r.generate_xlsx(filename=local_file)
         except Exception as e:
             logger.exception(f"Error generating XLSX report {report_name}")
             raise ReportBroError(str(e))
     else:
         raise Exception("unknown report format")
-    return FileResponse(
-        io.BytesIO(generated_report), filename=fname, as_attachment=False
-    )
+    return generated_report
 
 
 class ReportService(object):

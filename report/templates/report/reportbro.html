@@ -2,8 +2,47 @@
 
 <html>
   <head>
-    <link rel="stylesheet" href="{% static 'report/reportbro/reportbro.css' %}"/>
-    <script src="{% static 'report/reportbro/ext/jquery.js' %}"></script>
+      <link rel="stylesheet" href="{% static 'report/reportbro/reportbro.css' %}"/>
+      <style>
+          @font-face {
+              font-family: "dejavusans";
+              src: url("{% static 'report/reportbro/fonts/DejaVuSans.ttf' %}");
+          }
+          @font-face {
+              font-family: "notosans";
+              src: url("{% static 'report/reportbro/fonts/NotoSans-Regular.ttf' %}");
+          }
+          @font-face {
+              font-family: "notosans-arabic";
+              src: url("{% static 'report/reportbro/fonts/NotoSansArabic.ttf' %}");
+          }
+          @font-face {
+              font-family: "notosans-naskh-arabic";
+              src: url("{% static 'report/reportbro/fonts/NotoNaskhArabic.ttf' %}");
+          }
+          @font-face {
+              font-family: "notosans-ethiopic";
+              src: url("{% static 'report/reportbro/fonts/NotoSansEthiopic.ttf' %}");
+          }
+          @font-face {
+              font-family: "notosans-myanmar";
+              src: url("{% static 'report/reportbro/fonts/NotoSansMyanmar-Regular.ttf' %}");
+          }
+          @font-face {
+              font-family: "freesans";
+              src: url("{% static 'report/reportbro/fonts/FreeSans.ttf' %}");
+          }
+          @font-face {
+              font-family: "firefly";
+              src: url("{% static 'report/reportbro/fonts/fireflysung.ttf' %}");
+          }
+          @font-face {
+              font-family: "unifont";
+              src: url("{% static 'report/reportbro/fonts/unifont.ttf' %}");
+          }
+      </style>
+
+      <script src="{% static 'report/reportbro/ext/jquery.js' %}"></script>
     <script src="{% static 'report/reportbro/reportbro.min.js' %}"></script>
   </head>
   <body>
@@ -42,7 +81,18 @@
           menuShowDebug: true,
           saveCallback: onReportSave,
           menuShowButtonLabels: true,
-          reportServerUrl: "{% url 'reportbro_previewer' %}"
+          reportServerUrl: "{% url 'reportbro_previewer' %}",
+          additionalFonts: [
+              { name: 'DejaVuSans', value: 'dejavusans'},
+              { name: 'NotoSans', value: 'notosans'},
+              { name: 'NotoSans-Arabic', value: 'notosans-arabic'},
+              { name: 'Noto-Naskh-Arabic', value: 'notosans-naskh-arabic'},
+              { name: 'NotoSans-Ethiopic', value: 'notosans-ethiopic'},
+              { name: 'NotoSans-Myanmar', value: 'notosans-myanmar'},
+              { name: 'FreeSans', value: 'freesans'},
+              { name: 'Firefly', value: 'firefly'},
+              { name: 'Unifont', value: 'unifont'},
+          ]
         });
         post({type: 'READY'});
       });
