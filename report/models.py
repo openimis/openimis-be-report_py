@@ -70,5 +70,5 @@ class GeneratedReports(models.Model):
     REPORT_MODE_PAID = 1
 
     class Meta:
-        managed = False
+        managed = True
         db_table = "tblReporting"
