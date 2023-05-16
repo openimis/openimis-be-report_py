@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
         ('location', '0013_auto_20230317_1534'),
         ('product', '0008_auto_20230510_1347'),
         ('payer', '0001_initial'),
-        ('core', '0021_set_managed_to_true'),
+        ('core', '0019_extended_field'),
         ('report', '0007_add_edit_perms_imis_and_scheme_admin'),
     ]
 
