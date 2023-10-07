@@ -7,6 +7,7 @@ from core.utils import insert_role_right_for_system, remove_role_right_for_syste
 
 logger = logging.getLogger(__name__)
 
+# It is a dictionary with IsSystem values, it maps to RoleIDs:
 # ROLES_ID = [1, 2, 3, 5, 6, 7, 11, 12]
 ROLES_ID = [1, 2, 4, 16, 32, 64, 524288, 1048576]
 REPORT_QUERY_ROLE_ID = 131200
