@@ -4,12 +4,11 @@ import logging
 import os
 import tempfile
 
-from django.contrib.staticfiles import finders
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, FileResponse
 from django.template import loader
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
-from reportbro import Report, ReportBroError
+from reportbro import ReportBroError
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 
@@ -103,11 +102,11 @@ def reportbro_previewer(request):
         data = json_data.get('data')
         is_test_data = json_data.get('isTestData')
         try:
-            temp_file=tempfile.NamedTemporaryFile(delete=False)
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
             key = os.path.basename(temp_file.name)
             generate_report("preview", report_definition, data, output_format,
                             local_file=temp_file.name, is_test_data=is_test_data)
-            return HttpResponse('key:'+key)
+            return HttpResponse('key:' + key)
         except ReportBroError as e:
             logger.exception(e.error)
             return HttpResponse(json.dumps(dict(errors=[e.error])))

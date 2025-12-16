@@ -106,7 +106,7 @@ class ReportConfig(AppConfig):
             app = __import__(f"{app_}.report")
             if (
                 hasattr(app, "report") and
-                hasattr(app.report, "report_definitions")and
+                hasattr(app.report, "report_definitions") and
                 isinstance(app.report.report_definitions, list)
             ):
                 self.reports += app.report.report_definitions

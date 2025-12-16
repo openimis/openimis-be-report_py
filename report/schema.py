@@ -5,7 +5,6 @@ from core.schema import OpenIMISMutation
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
-from core.utils import TimeUtils
 from report.apps import ReportConfig
 from report.models import ReportDefinition
 from report.services import get_report_definition

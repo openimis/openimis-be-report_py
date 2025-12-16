@@ -12,8 +12,6 @@ EDIT_REPORT_ROLE_RIGHT_ID = 131225
 
 
 def add_rights(apps, schema_editor):
-    RoleRight = apps.get_model('core', 'RoleRight')
-    Role = apps.get_model('core', 'Role')
     """
     Add edit_report permission to the IMIS Administrator and Scheme Administrator.
     """
@@ -23,7 +21,6 @@ def add_rights(apps, schema_editor):
 
 def remove_rights(apps, schema_editor):
     RoleRight = apps.get_model('core', 'RoleRight')
-    Role = apps.get_model('core', 'Role')
     """
     Remove edit_report permission to the IMIS Administrator and Scheme Administrator.
     """
