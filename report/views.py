@@ -72,6 +72,7 @@ def report(request, report_name, report_format="pdf", alternate=None):
     )
 
 
+@api_view(["GET","PUT","POST"])
 @xframe_options_exempt
 @permission_classes([check_user_rights(
     ReportConfig.gql_query_report_perms
@@ -83,6 +84,7 @@ def reportbro_designer(request):
     return HttpResponse(template.render(context, request))
 
 
+@api_view(["GET","PUT","POST"])
 @xframe_options_exempt
 @permission_classes([check_user_rights(
     ReportConfig.gql_query_report_perms
