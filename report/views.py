@@ -11,6 +11,8 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from reportbro import ReportBroError
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import api_view, permission_classes
+from core.views import check_user_rights
 
 from report.services import generate_report, get_report_definition
 
@@ -20,6 +22,9 @@ logger = logging.getLogger(__file__)
 
 
 @api_view(["GET"])
+@permission_classes([check_user_rights(
+    ReportConfig.gql_query_report_perms
+)])
 def report(request, report_name, report_format="pdf", alternate=None):
     """
     Run a report
@@ -67,7 +72,11 @@ def report(request, report_name, report_format="pdf", alternate=None):
     )
 
 
+@api_view(["GET","PUT","POST"])
 @xframe_options_exempt
+@permission_classes([check_user_rights(
+    ReportConfig.gql_query_report_perms
+)])
 def reportbro_designer(request):
     template = loader.get_template("report/reportbro.html")
 
@@ -75,7 +84,11 @@ def reportbro_designer(request):
     return HttpResponse(template.render(context, request))
 
 
+@api_view(["GET","PUT","POST"])
 @xframe_options_exempt
+@permission_classes([check_user_rights(
+    ReportConfig.gql_query_report_perms
+)])
 def reportbro_previewer(request):
     """
     Generates a report preview within the designer. This can work in two ways:
