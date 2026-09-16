@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="openimis-be-report",
-    version='1.6.2',
+    version='1.6.3',
     packages=find_packages(),
     include_package_data=True,
     license="GNU AGPL v3",
@@ -25,8 +25,8 @@ setup(
         "cached-property",
         "nepalicalendar",
         "openimis-be-core",
-        "reportbro-lib",
-        "reportbro-fpdf",
+        "reportbro-lib>=3.8",
+        "reportbro-fpdf2",
     ],
     classifiers=[
         "Environment :: Web Environment",

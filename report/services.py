@@ -14,6 +14,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 import logging
 logger = logging.getLogger(__name__)
 
+# The formats generate_report knows how to render. Callers validate against
+# this rather than letting an unknown one fall through to the exception
+# below, which a view can only report as a 500.
+SUPPORTED_REPORT_FORMATS = ("pdf", "xlsx")
+
 # Restrict the datetime key in the report bro eval to the datetime class to avoid security issues
 RESTRICTED_REPORT_BRO_EVAL_TABLE = {
     'datetime': datetime.datetime,

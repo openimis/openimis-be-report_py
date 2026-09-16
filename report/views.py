@@ -4,17 +4,21 @@ import logging
 import os
 import tempfile
 
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, FileResponse
+from django.http import HttpResponse, HttpResponseBadRequest, FileResponse
 from django.template import loader
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
 from reportbro import ReportBroError
-from rest_framework.decorators import api_view
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from core.views import check_user_rights
 
-from report.services import generate_report, get_report_definition
+from report.services import (
+    SUPPORTED_REPORT_FORMATS,
+    generate_report,
+    get_report_definition,
+)
 
 from .apps import ReportConfig
 
@@ -22,9 +26,10 @@ logger = logging.getLogger(__file__)
 
 
 @api_view(["GET"])
-@permission_classes([check_user_rights(
-    ReportConfig.gql_query_report_perms
-)])
+# Only authentication is enforced here: which right grants *this* report
+# depends on the report being asked for, which the permission class cannot see.
+# The rights check is below, once report_config is resolved.
+@permission_classes([IsAuthenticated])
 def report(request, report_name, report_format="pdf", alternate=None):
     """
     Run a report
@@ -41,14 +46,28 @@ def report(request, report_name, report_format="pdf", alternate=None):
     )
     report_config = ReportConfig.get_report(report_name)
     if not report_config:
-        raise Http404("Poll does not exist")
+        raise NotFound(_("Unknown report: %(report)s") % {"report": report_name})
+    if report_format not in SUPPORTED_REPORT_FORMATS:
+        # report_format comes straight out of the URL. generate_report raises a
+        # bare Exception for anything else, which reaches the caller as a 500
+        # for what is their own typo.
+        raise ValidationError(
+            _("Unsupported report format '%(format)s', expected one of %(supported)s")
+            % {
+                "format": report_format,
+                "supported": ", ".join(SUPPORTED_REPORT_FORMATS),
+            }
+        )
     report_definition = get_report_definition(
         report_name, report_config["default_report"]
     )
-    if (
-        report_config.get("permission")
-        and not request.user.has_perms(ReportConfig.gql_query_report_perms)
-        and not request.user.has_perms(report_config.get("permission"))
+    # Either the generic "may run reports" right or the right the report
+    # declares for itself is enough. A report that declares none is reachable
+    # with the generic right alone.
+    report_permission = report_config.get("permission")
+    if not (
+        request.user.has_perms(ReportConfig.gql_query_report_perms)
+        or (report_permission and request.user.has_perms(report_permission))
     ):
         raise PermissionDenied(_("unauthorized"))
 
@@ -59,6 +78,13 @@ def report(request, report_name, report_format="pdf", alternate=None):
     }
 
     data = report_config["python_query"](request.user, **unlisted)
+
+    # The queries signal a bad parameter by returning {"error": ...} instead of
+    # raising. That used to be rendered into the report and returned as a 200,
+    # so a client got a PDF of an error message and no way to tell a rejected
+    # request from a real report.
+    if isinstance(data, dict) and data.get("error"):
+        raise ValidationError(data["error"])
 
     return FileResponse(
         io.BytesIO(
