@@ -10,41 +10,41 @@ logger = logging.getLogger(__file__)
 MODULE_NAME = "report"
 
 
-# Droits, par entite puis par action.
+# Rights, by entity then by action.
 #
-# Deux familles, et c'est voulu :
+# Two families, and that is intended:
 #
-#  * `report` est le gabarit : le catalogue lisible (131200) et la surcharge de la
-#    definition ReportBro stockee en base (131224/25/26). Un seul objet metier,
-#    quatre actions canoniques, un seul modele (`ReportDefinition`).
+#  * `report` is the template: the readable catalogue (131200) and the override of
+#    the ReportBro definition stored in the database (131224/25/26). A single
+#    business object, four canonical actions, a single model (`ReportDefinition`).
 #
-#  * les 23 autres entites sont les *etats* du catalogue openIMIS : un etat = un
-#    rapport nomme, livre en code par un module (`report_definitions`), avec un
-#    identifiant a lui. Chacun n'a qu'une action, `query` - le lancer. Ils sont
-#    declares une entite chacun plutot qu'en actions de `report` parce qu'un etat
-#    n'est pas une operation sur le gabarit : c'est un objet metier distinct, dote
-#    de sa propre requete et de son propre droit, que `report` ne fait
-#    qu'heberger. Meme forme que `claim_batch.capitationPaymentReport`.
+#  * the other 23 entities are the openIMIS catalogue's *statements*: one statement
+#    = one named report, shipped in code by a module (`report_definitions`), with
+#    an identifier of its own. Each has a single action, `query` - running it. They
+#    are declared as one entity each rather than as actions of `report` because a
+#    statement is not an operation on the template: it is a distinct business
+#    object, with its own query and its own right, which `report` merely hosts.
+#    Same shape as `claim_batch.capitationPaymentReport`.
 #
-# Le pont vers le catalogue est `CATALOGUE_STATES` plus bas : c'est lui qui rend
-# lisible quel etat sert quel `report_definitions[*]["name"]`, correspondance que
-# seul l'entier ecrit en dur dans chaque module portait jusqu'ici.
+# The bridge to the catalogue is `CATALOGUE_STATES` further down: that is what makes
+# readable which statement serves which `report_definitions[*]["name"]`, a mapping
+# that until now only the integer hard-coded in each module carried.
 #
-# Neuf etats ne gardent aujourd'hui aucun rapport du catalogue (marques
-# "dormant"). Ils sont conserves : `RoleRight.right_id` est un entier et ces
-# entiers sont semes sur les roles (fixtures solution-builder, cartes de
-# permissions) ; les retirer casserait le registre nom -> identifiant sur lequel
-# s'appuie le semis, et rendrait l'identifiant reattribuable par erreur.
+# Nine statements guard no catalogue report today (marked "dormant"). They are kept:
+# `RoleRight.right_id` is an integer and those integers are seeded onto the roles
+# (solution-builder fixtures, permission maps); removing them would break the
+# name -> identifier register the seeding relies on, and would make the identifier
+# reassignable by mistake.
 DJANGO_PERMS = {
-    # Le gabarit et le catalogue.
+    # The template and the catalogue.
     "report": {
         "query": ("report.view_reportdefinition", 131200),
         "create": ("report.add_reportdefinition", 131224),
         "update": ("report.change_reportdefinition", 131225),
         "delete": ("report.delete_reportdefinition", 131226),
     },
-    # Les etats. Pas de modele django derriere : le nom reste declaratif, forme
-    # sur le nom de l'entite, comme `claim_batch.view_capitationpaymentreport`.
+    # The statements. No django model behind them: the name stays declarative,
+    # formed on the entity's name, like `claim_batch.view_capitationpaymentreport`.
     "primaryOperationalIndicatorPoliciesReport": {
         "query": ("report.view_primaryoperationalindicatorpoliciesreport", 131201),
     },
@@ -66,24 +66,24 @@ DJANGO_PERMS = {
     "userActivityReport": {
         "query": ("report.view_useractivityreport", 131207),
     },
-    # Dormant : aucun `report_definitions` ne porte 131208. L'etat "enrolment
-    # performance indicators" n'est pas livre par les modules de cet assemblage.
+    # Dormant: no `report_definitions` carries 131208. The "enrolment performance
+    # indicators" statement is not shipped by this assembly's modules.
     "enrolmentPerformanceIndicatorsReport": {
         "query": ("report.view_enrolmentperformanceindicatorsreport", 131208),
     },
     "statusOfRegisterReport": {
         "query": ("report.view_statusofregisterreport", 131209),
     },
-    # Dormant : `insuree.insuree_missing_photo` est l'etat que ce droit nomme,
-    # mais le catalogue lui applique 131215 (voir CATALOGUE_STATES). Conserve
-    # comme registre nom -> identifiant ; le recablage est un autre lot.
+    # Dormant: `insuree.insuree_missing_photo` is the statement this right names,
+    # but the catalogue applies 131215 to it (see CATALOGUE_STATES). Kept as a
+    # name -> identifier register; the rewiring is another batch of work.
     "insureeWithoutPhotosReport": {
         "query": ("report.view_insureewithoutphotosreport", 131210),
     },
     "paymentCategoryOverviewReport": {
         "query": ("report.view_paymentcategoryoverviewreport", 131211),
     },
-    # Dormant : aucun rapport "matching funds" dans cet assemblage.
+    # Dormant: no "matching funds" report in this assembly.
     "matchingFundsReport": {
         "query": ("report.view_matchingfundsreport", 131212),
     },
@@ -93,41 +93,41 @@ DJANGO_PERMS = {
     "percentageReferralsReport": {
         "query": ("report.view_percentagereferralsreport", 131214),
     },
-    # Porte a lui seul les quatre etats insuree du catalogue - voir
-    # CATALOGUE_STATES : ce n'est pas un choix, c'est l'etat des lieux.
+    # Carries on its own the catalogue's four insuree statements - see
+    # CATALOGUE_STATES: that is not a choice, it is how things stand.
     "familiesInsureesOverviewReport": {
         "query": ("report.view_familiesinsureesoverviewreport", 131215),
     },
-    # Dormant, comme 131210 : `insuree.insurees_pending_enrollment` est bien
-    # l'etat que ce droit nomme, mais le catalogue lui applique 131215.
+    # Dormant, like 131210: `insuree.insurees_pending_enrollment` really is the
+    # statement this right names, but the catalogue applies 131215 to it.
     "pendingInsureesReport": {
         "query": ("report.view_pendinginsureesreport", 131216),
     },
     "renewalsReport": {
         "query": ("report.view_renewalsreport", 131217),
     },
-    # Dormant ici, vivant ailleurs : 131218 est aussi declare par
-    # `claim_batch.capitationPaymentReport`, qui heberge l'etat capitation. Meme
-    # entier, deux noms django (l'app_label suit le module qui declare) : une
-    # reutilisation assumee, pas une collision. Conserve ici parce que c'est le
-    # bloc report qui alloue l'identifiant.
+    # Dormant here, alive elsewhere: 131218 is also declared by
+    # `claim_batch.capitationPaymentReport`, which hosts the capitation statement.
+    # Same integer, two django names (the app_label follows the declaring module): an
+    # owned reuse, not a collision. Kept here because the report block is what
+    # allocates the identifier.
     "capitationPaymentReport": {
         "query": ("report.view_capitationpaymentreport", 131218),
     },
-    # Dormant : aucun rapport "rejected photo" dans cet assemblage.
+    # Dormant: no "rejected photo" report in this assembly.
     "rejectedPhotoReport": {
         "query": ("report.view_rejectedphotoreport", 131219),
     },
-    # Dormant : aucun rapport "contribution payment" dans cet assemblage.
+    # Dormant: no "contribution payment" report in this assembly.
     "contributionPaymentReport": {
         "query": ("report.view_contributionpaymentreport", 131220),
     },
-    # Dormant : l'attribution de numero de controle vit dans les modules de
-    # paiement (contribution/payment), qui ne publient pas d'etat.
+    # Dormant: control number assignment lives in the payment modules
+    # (contribution/payment), which publish no statement.
     "controlNumberAssignmentReport": {
         "query": ("report.view_controlnumberassignmentreport", 131221),
     },
-    # Dormant : l'etat "commissions" n'est pas livre par cet assemblage.
+    # Dormant: the "commissions" statement is not shipped by this assembly.
     "overviewOfCommissionsReport": {
         "query": ("report.view_overviewofcommissionsreport", 131222),
     },
@@ -186,20 +186,20 @@ configured_perms = RIGHTS.configured
 require = RIGHTS.require
 
 
-# Le pont, jusqu'ici implicite, entre le catalogue et les etats declares ci-dessus.
+# The bridge, implicit until now, between the catalogue and the statements declared
+# above.
 #
-# Chaque module publie ses rapports dans `report_definitions`, ou la cle
-# "permission" est un entier ecrit en dur, sans nom : rien ne disait a quel etat
-# du catalogue openIMIS il correspondait, ni qu'un droit nomme pour cet etat
-# existait et restait inerte. C'est ce trou qui a laisse les quatre rapports
-# insuree partir tous les quatre sur 131215 alors que 131210
-# (insureeWithoutPhotosReport) et 131216 (pendingInsureesReport) leur sont
-# assignes dans le catalogue.
+# Each module publishes its reports in `report_definitions`, where the "permission"
+# key is a hard-coded integer with no name: nothing said which openIMIS catalogue
+# statement it corresponded to, nor that a right named for that statement existed
+# and stayed inert. That is the gap that let all four insuree reports go out on
+# 131215 when 131210 (insureeWithoutPhotosReport) and 131216 (pendingInsureesReport)
+# are the ones assigned to them in the catalogue.
 #
-# Cette table dit ce qui est *applique* aujourd'hui, pas ce qui devrait l'etre :
-# les quatre entrees insuree pointent donc familiesInsureesOverviewReport. Le
-# test de non-regression epingle la correspondance, divergences comprises, pour
-# que le recablage (autre lot) soit visible en revue.
+# This table says what is *enforced* today, not what ought to be: the four insuree
+# entries therefore point at familiesInsureesOverviewReport. The regression test pins
+# the mapping down, divergences included, so that the rewiring (another batch of
+# work) is visible in review.
 CATALOGUE_STATES = {
     # claim
     "claim_percentage_referrals": "percentageReferralsReport",
@@ -213,7 +213,7 @@ CATALOGUE_STATES = {
     # core
     "user_activity": "userActivityReport",
     "registers_status": "statusOfRegisterReport",
-    # insuree - les quatre sur le meme etat, cf. ci-dessus
+    # insuree - all four on the same statement, see above
     "insuree_missing_photo": "familiesInsureesOverviewReport",
     "insurees_pending_enrollment": "familiesInsureesOverviewReport",
     "insuree_family_overview": "familiesInsureesOverviewReport",
@@ -229,16 +229,16 @@ CATALOGUE_STATES = {
 
 def catalogue_state_rights(report_name):
     """
-    Les droits de l'etat servi par ce rapport du catalogue, ou None s'il n'en
-    declare aucun - l'appelant doit alors echouer ferme.
+    The rights of the statement this catalogue report serves, or None when it
+    declares none - the caller must then fail closed.
 
-    L'equivalent de `Model.get_rights` pour une entite qui n'a pas de modele :
-    un etat est du code (une requete + un gabarit), pas une ligne en base. Lit la
-    valeur configuree a l'appel, jamais a l'import : les cles `_perms` ne valent
-    leur valeur qu'apres `ready()`.
+    The equivalent of `Model.get_rights` for an entity that has no model: a statement
+    is code (a query plus a template), not a row in the database. Reads the configured
+    value at call time, never at import: the `_perms` keys only hold their value after
+    `ready()`.
 
-    Les vues lisent encore `report_definitions[*]["permission"]` en direct ; les
-    y brancher est un autre lot.
+    The views still read `report_definitions[*]["permission"]` directly; wiring them
+    onto this is another batch of work.
     """
     entity = CATALOGUE_STATES.get(report_name)
     if entity is None:
