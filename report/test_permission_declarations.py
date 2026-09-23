@@ -189,7 +189,7 @@ class ReportPermissionDeclarationTestCase(TestCase):
                 self.assertIn(
                     name,
                     CATALOGUE_STATES,
-                    f"{name} est publie par un module mais n'est rattache a aucun etat",
+                    f"{name} is published by a module but attached to no statement",
                 )
                 self.assertEqual(catalogue_state_rights(name), report["permission"])
 
