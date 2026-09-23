@@ -1,19 +1,20 @@
 """
-Garde-fous sur la declaration des droits de report.
+Guard rails on report's rights declaration.
 
-Meme structure que `claim` : `DJANGO_PERMS` par entite puis par action, `_PERM_CFG` qui
-en derive les cles de config, et `ReportDefinition.get_rights` comme point d'acces.
+Same structure as `claim`: `DJANGO_PERMS` by entity then by action, `_PERM_CFG`
+deriving the config keys from it, and `ReportDefinition.get_rights` as the access
+point.
 
-La specificite de report est qu'un droit sur deux ne protege pas un modele mais un
-*etat* du catalogue - un rapport nomme, livre en code par un autre module dans
-`report_definitions`, ou la cle "permission" porte l'entier en dur et rien d'autre.
-`CATALOGUE_STATES` est le pont entre les deux, et c'est ce que ce fichier epingle :
-un entier deplace, un etat renomme ou un rapport qui change de droit devient visible
-en revue.
+What is specific to report is that every other right protects not a model but a
+catalogue *statement* - a named report, shipped in code by another module in
+`report_definitions`, where the "permission" key carries the integer hard-coded and
+nothing else. `CATALOGUE_STATES` is the bridge between the two, and that is what this
+file pins down: a moved integer, a renamed statement or a report that changes right
+becomes visible in review.
 
-Ce fichier decrit l'etat *applique*, pas l'etat souhaitable : les quatre rapports
-insuree partagent 131215 alors que 131210 et 131216 leur sont nommement assignes dans
-le catalogue. La divergence est listee, pas corrigee (autre lot).
+This file describes the state as *enforced*, not as it ought to be: the four insuree
+reports share 131215 while 131210 and 131216 are the ones assigned to them by name in
+the catalogue. The divergence is listed, not fixed (another batch of work).
 """
 
 from django.test import TestCase
@@ -62,25 +63,25 @@ EXPECTED_RIGHTS = {
     "gql_reports_claim_history_report_perms": ["131223"],
 }
 
-# Etats declares qu'aucun rapport du catalogue ne sert. Conserves parce que
-# `RoleRight.right_id` est un entier seme sur les roles : l'identifiant doit rester
-# reserve et son nom retrouvable. En retirer un d'ici demande de verifier d'abord
-# qu'aucun role, aucune fixture et aucune carte de permissions ne le porte.
+# Declared statements that no catalogue report serves. Kept because
+# `RoleRight.right_id` is an integer seeded onto the roles: the identifier has to stay
+# reserved and its name findable. Removing one from here requires first checking that
+# no role, no fixture and no permission map carries it.
 DORMANT_STATES = {
-    "enrolmentPerformanceIndicatorsReport",  # 131208, etat non livre
-    "insureeWithoutPhotosReport",            # 131210, le catalogue applique 131215
-    "matchingFundsReport",                   # 131212, etat non livre
-    "pendingInsureesReport",                 # 131216, le catalogue applique 131215
-    "capitationPaymentReport",               # 131218, l'etat vit dans claim_batch
-    "rejectedPhotoReport",                   # 131219, etat non livre
-    "contributionPaymentReport",             # 131220, etat non livre
-    "controlNumberAssignmentReport",         # 131221, etat non livre
-    "overviewOfCommissionsReport",           # 131222, etat non livre
+    "enrolmentPerformanceIndicatorsReport",  # 131208, statement not shipped
+    "insureeWithoutPhotosReport",            # 131210, the catalogue applies 131215
+    "matchingFundsReport",                   # 131212, statement not shipped
+    "pendingInsureesReport",                 # 131216, the catalogue applies 131215
+    "capitationPaymentReport",               # 131218, the statement lives in claim_batch
+    "rejectedPhotoReport",                   # 131219, statement not shipped
+    "contributionPaymentReport",             # 131220, statement not shipped
+    "controlNumberAssignmentReport",         # 131221, statement not shipped
+    "overviewOfCommissionsReport",           # 131222, statement not shipped
 }
 
-# Le catalogue tel qu'il est aujourd'hui : nom du rapport -> entier applique par
-# `report_definitions[*]["permission"]` dans le module qui le publie. C'est ce que
-# `CATALOGUE_STATES` doit refleter.
+# The catalogue as it stands today: report name -> integer enforced by
+# `report_definitions[*]["permission"]` in the module that publishes it. That is what
+# `CATALOGUE_STATES` has to reflect.
 EXPECTED_CATALOGUE_RIGHTS = {
     "claim_percentage_referrals": ["131214"],
     "claims_overview": ["131213"],
@@ -91,9 +92,9 @@ EXPECTED_CATALOGUE_RIGHTS = {
     "contributions_distribution": ["131206"],
     "user_activity": ["131207"],
     "registers_status": ["131209"],
-    # Les quatre etats insuree sont appliques avec le meme droit, alors que
-    # 131210 et 131216 leur sont assignes dans le catalogue et restent inertes.
-    # Constat, pas cible : le recablage est un autre lot.
+    # The four insuree statements are enforced with the same right, while 131210 and
+    # 131216 are assigned to them in the catalogue and stay inert. An observation, not
+    # a target: the rewiring is another batch of work.
     "insuree_missing_photo": ["131215"],
     "insurees_pending_enrollment": ["131215"],
     "insuree_family_overview": ["131215"],
@@ -143,9 +144,9 @@ class ReportPermissionDeclarationTestCase(TestCase):
 
     def test_right_ids_are_not_shared(self):
         """
-        Aucun partage d'identifiant dans ce module : un etat = un entier. 131218 est
-        aussi declare par `claim_batch.capitationPaymentReport`, mais c'est un partage
-        entre modules, invisible d'ici.
+        No identifier sharing in this module: one statement = one integer. 131218 is
+        also declared by `claim_batch.capitationPaymentReport`, but that is a sharing
+        between modules, invisible from here.
         """
         seen = {}
         for entity, actions in DJANGO_PERMS.items():
@@ -179,8 +180,8 @@ class ReportPermissionDeclarationTestCase(TestCase):
 
     def test_catalogue_state_rights_match_the_catalogue(self):
         """
-        Le droit que `CATALOGUE_STATES` designe doit etre celui que le module publiant
-        le rapport ecrit en dur dans `report_definitions[*]["permission"]`.
+        The right `CATALOGUE_STATES` denotes has to be the one the module publishing
+        the report hard-codes in `report_definitions[*]["permission"]`.
         """
         for report in ReportConfig.reports:
             name = report["name"]
@@ -193,7 +194,7 @@ class ReportPermissionDeclarationTestCase(TestCase):
                 self.assertEqual(catalogue_state_rights(name), report["permission"])
 
     def test_catalogue_rights_unchanged(self):
-        """Epingle l'entier applique par chaque rapport present dans l'assemblage."""
+        """Pins the integer enforced by every report present in the assembly."""
         applied = {
             report["name"]: report["permission"]
             for report in ReportConfig.reports
@@ -214,8 +215,8 @@ class ReportPermissionDeclarationTestCase(TestCase):
 
     def test_dormant_states_are_the_expected_ones(self):
         """
-        Un etat qui n'apparait plus dans `CATALOGUE_STATES` devient dormant sans bruit :
-        son droit cesse d'etre applique alors que les roles le portent toujours.
+        A statement that no longer appears in `CATALOGUE_STATES` becomes dormant
+        silently: its right stops being enforced while the roles still carry it.
         """
         served = set(CATALOGUE_STATES.values())
         dormant = {
