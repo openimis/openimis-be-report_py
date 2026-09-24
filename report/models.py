@@ -24,7 +24,22 @@ class ReportDefinition(core_models.UUIDModel, UUIDVersionedModel):
         managed = True
         db_table = "report_ReportDefinition"
 
+    @classmethod
+    def get_rights(cls, action):
+        # Read inside the method, never at import: the `_perms` keys only hold
+        # their value after `ready()`, and a snapshot taken at import would capture
+        # the placeholder - hence an empty list, which `has_perms` grants to
+        # everybody.
+        from report.apps import configured_perms
 
+        return configured_perms("report", action)
+
+
+# The statements' execution trace (tblReporting), filled in by the capitation and
+# commission reports. No `get_rights` and no `scope_parent`: no code in this assembly
+# reads it, and its four FKs (location, product, payer, officer) are dimensions of the
+# statement, none of them its owner - a `scope_parent` here would be an inference, not
+# a declaration.
 class GeneratedReports(models.Model):
     id = models.AutoField(db_column="ReportingId", primary_key=True)
     reporting_date = models.TextField(db_column="ReportingDate")
