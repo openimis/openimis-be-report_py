@@ -135,7 +135,7 @@ class ReportPermissionDeclarationTestCase(TestCase):
                 self.assertEqual(getattr(ReportConfig, key), perms(entity, action))
 
     def test_every_state_has_exactly_one_action(self):
-        """Un etat se lance, point : `query` et rien d'autre."""
+        """A statement is run, full stop: `query` and nothing else."""
         for entity, actions in DJANGO_PERMS.items():
             if entity == "report":
                 continue
