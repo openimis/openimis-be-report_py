@@ -27,6 +27,7 @@ setup(
         "openimis-be-core",
         "reportbro-lib",
         "reportbro-fpdf",
+        "pypdf>=6.0,<7.0",
     ],
     classifiers=[
         "Environment :: Web Environment",

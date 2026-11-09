@@ -20,6 +20,31 @@ from .apps import ReportConfig
 logger = logging.getLogger(__file__)
 
 
+def _generate_report_documents(report_name, report_definition, data, report_format):
+    documents = data.get("report_documents") if isinstance(data, dict) else None
+    if not documents or report_format != "pdf":
+        return generate_report(report_name, report_definition, data, report_format)
+
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    for document in documents:
+        writer.append(
+            io.BytesIO(
+                generate_report(
+                    report_name,
+                    report_definition,
+                    document,
+                    report_format,
+                )
+            )
+        )
+    output = io.BytesIO()
+    writer.write(output)
+    writer.close()
+    return output.getvalue()
+
+
 @api_view(["GET"])
 def report(request, report_name, report_format="pdf", alternate=None):
     """
@@ -56,15 +81,17 @@ def report(request, report_name, report_format="pdf", alternate=None):
 
     data = report_config["python_query"](request.user, **unlisted)
 
+    report_filename = data.get("report_filename", report_name) if isinstance(data, dict) else report_name
+
     return FileResponse(
         io.BytesIO(
-            generate_report(
+            _generate_report_documents(
                 report_name,
                 report_definition,
                 data,
                 report_format,
             )
-        ), filename=f"{report_name}.{report_format}", as_attachment=False
+        ), filename=f"{report_filename}.{report_format}", as_attachment=False
     )
 
 
