@@ -10,14 +10,34 @@ from django.template import loader
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
 from reportbro import ReportBroError
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 from report.services import generate_report, get_report_definition
 
 from .apps import ReportConfig
 
 logger = logging.getLogger(__file__)
+
+
+class HasReportRight(IsAuthenticated):
+    """
+    Authenticated, and holding the generic report right.
+
+    Backport of the view-level check of the CVE-2026-82489 fix. core's
+    check_user_rights(ReportConfig.gql_query_report_perms) is not used here: on
+    this branch ReportConfig.ready() rebinds the attribute from the module
+    configuration, so a list captured by a decorator at import time could be the
+    empty class default, and has_perms([]) is True for every user. The right is
+    read on each request instead.
+    """
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.has_perms(
+            ReportConfig.gql_query_report_perms
+        )
+
 
 # Previews live in a directory of their own, so that a key can only ever name a
 # file this view wrote. The key is the basename of a NamedTemporaryFile: "tmp"
@@ -58,6 +78,10 @@ def _preview_path(key):
 
 
 @api_view(["GET"])
+# Only authentication is enforced here: which right grants *this* report
+# depends on the report being asked for, which the permission class cannot see.
+# The rights check is below, once report_config is resolved.
+@permission_classes([IsAuthenticated])
 def report(request, report_name, report_format="pdf", alternate=None):
     """
     Run a report
@@ -78,10 +102,13 @@ def report(request, report_name, report_format="pdf", alternate=None):
     report_definition = get_report_definition(
         report_name, report_config["default_report"]
     )
-    if (
-        report_config.get("permission")
-        and not request.user.has_perms(ReportConfig.gql_query_report_perms)
-        and not request.user.has_perms(report_config.get("permission"))
+    # Either the generic "may run reports" right or the right the report
+    # declares for itself is enough. A report that declares none is reachable
+    # with the generic right alone.
+    report_permission = report_config.get("permission")
+    if not (
+        request.user.has_perms(ReportConfig.gql_query_report_perms)
+        or (report_permission and request.user.has_perms(report_permission))
     ):
         raise PermissionDenied(_("unauthorized"))
 
@@ -105,7 +132,9 @@ def report(request, report_name, report_format="pdf", alternate=None):
     )
 
 
+@api_view(["GET", "PUT", "POST"])
 @xframe_options_exempt
+@permission_classes([HasReportRight])
 def reportbro_designer(request):
     template = loader.get_template("report/reportbro.html")
 
@@ -113,7 +142,9 @@ def reportbro_designer(request):
     return HttpResponse(template.render(context, request))
 
 
+@api_view(["GET", "PUT", "POST"])
 @xframe_options_exempt
+@permission_classes([HasReportRight])
 def reportbro_previewer(request):
     """
     Generates a report preview within the designer. This can work in two ways:
