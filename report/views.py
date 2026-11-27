@@ -2,9 +2,10 @@ import io
 import json
 import logging
 import os
+import re
 import tempfile
 
-from django.http import HttpResponse, HttpResponseBadRequest, FileResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, FileResponse
 from django.template import loader
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -23,6 +24,43 @@ from report.services import (
 from .apps import ReportConfig
 
 logger = logging.getLogger(__file__)
+
+# Previews live in a directory of their own, so that a key can only ever name a
+# file this view wrote. The key is the basename of a NamedTemporaryFile: "tmp"
+# followed by characters from tempfile's alphabet, never a path separator or
+# a dot (OP-3352).
+PREVIEW_DIR_NAME = "openimis-report-preview"
+PREVIEW_KEY_PATTERN = re.compile(r"tmp[A-Za-z0-9_]+")
+
+
+def _preview_dir():
+    path = os.path.realpath(os.path.join(tempfile.gettempdir(), PREVIEW_DIR_NAME))
+    os.makedirs(path, mode=0o700, exist_ok=True)
+    return path
+
+
+def _remove_preview(path):
+    # Two requests for the same key may race; the loser has nothing to remove.
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
+
+def _preview_path(key):
+    """
+    Path of the preview a key names, or None if the key could name anything else.
+    fullmatch rather than match with "$": "$" also matches before a trailing
+    newline. realpath resolves symlinks and "..", so a key is also refused if it
+    resolves outside the preview directory.
+    """
+    if not isinstance(key, str) or not PREVIEW_KEY_PATTERN.fullmatch(key):
+        return None
+    preview_dir = _preview_dir()
+    path = os.path.realpath(os.path.join(preview_dir, key))
+    if os.path.dirname(path) != preview_dir:
+        return None
+    return path
 
 
 @api_view(["GET"])
@@ -140,16 +178,18 @@ def reportbro_previewer(request):
         report_definition = json_data.get('report')
         data = json_data.get('data')
         is_test_data = json_data.get('isTestData')
+        with tempfile.NamedTemporaryFile(dir=_preview_dir(), prefix="tmp", delete=False) as temp_file:
+            preview_path = temp_file.name
         try:
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            key = os.path.basename(temp_file.name)
             generate_report("preview", report_definition, data, output_format,
-                            local_file=temp_file.name, is_test_data=is_test_data)
-            return HttpResponse('key:' + key)
+                            local_file=preview_path, is_test_data=is_test_data)
+            return HttpResponse('key:' + os.path.basename(preview_path))
         except ReportBroError as e:
+            _remove_preview(preview_path)
             logger.exception(e.error)
             return HttpResponse(json.dumps(dict(errors=[e.error])))
         except Exception as e:
+            _remove_preview(preview_path)
             logger.exception(e)
             return HttpResponseBadRequest('failed to generate report: ' + str(e))
     if request.method == 'GET':
@@ -180,12 +220,18 @@ def reportbro_previewer(request):
                     )
                 ), filename=f"preview.{output_format}", as_attachment=False
             )
+        preview_path = _preview_path(key)
+        if preview_path is None:
+            return HttpResponseBadRequest('invalid preview key')
         try:
-            with open(os.path.join(tempfile.gettempdir(), key), 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/pdf')
-                response['Content-Disposition'] = 'inline; filename="report_preview.pdf"'
-                return response
-        except Exception as e:
-            logger.exception(e)
-            return HttpResponseBadRequest('failed to generate report: ' + str(e))
+            with open(preview_path, 'rb') as f:
+                content = f.read()
+        except FileNotFoundError:
+            return HttpResponseNotFound('preview not found')
+        # A preview is served once: the designer asks for a new one on every
+        # change, and nothing else would ever clean it up.
+        _remove_preview(preview_path)
+        response = HttpResponse(content, content_type='application/pdf')
+        response['Content-Disposition'] = 'inline; filename="report_preview.pdf"'
+        return response
     return HttpResponseBadRequest('invalid request method')

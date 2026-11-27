@@ -182,4 +182,3 @@ class ReportBroPreviewTestCase(APITestCase):
             f"tmpop3352{uuid.uuid4().hex}", token=self.unprivileged_token
         )
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
-
